@@ -21,8 +21,13 @@ def import_csv_data():
 
 	return df_train,df_test,df_stations
 
+
 def split_df(df_data):
-	
+    
+    times=df_data[:,0].astype(int)
+    data=[:,1:]
+    
+    return times,data
 
 
 def get_all_predictors(predictors):
@@ -37,7 +42,7 @@ def get_all_predictors(predictors):
 	return X
 
 
-def get_predictor()
+def get_predictor(predictor):
 
 	X=Dataset(os.path.join(path,i+train_end)).variables.values()[-1][:]
 	X=X.reshape(X.shape[0],55,9,16)
@@ -45,6 +50,26 @@ def get_predictor()
 	X=X.reshape(X.shape[0],np.prod(X.shape[1:]))
 
 	return X
+
+
+
+
+def make_stationary():
+    
+
+    return X
+
+
+
+def train_model():
+
+    return model
+
+
+
+def predict():
+
+    return prediction
 
 
 def MAE(predictions,target):
@@ -61,8 +86,11 @@ def main():
 	train_end = '_latlon_subset_19940101_20071231.nc'
 	train_path='train/'
 
-	test_end = '_latlon_subset_20080101_20121130'
+	test_end = '_latlon_subset_20080101_20121130.nc'
 	test_path='test/'
+
+    model=sk.Ridge(normalize=True)
+
 
 
 if __name__ == "__main__":
