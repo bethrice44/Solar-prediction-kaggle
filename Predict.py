@@ -53,31 +53,81 @@ def get_predictor(path,predictor,postfix):
 	return X
 
 
-def PCA(data):
-    """Run principal component analysis on the data"""
+def Run_random_forest(trainX,trainY,testX):
+    """Run a random forest regressor model"""
     
+    init_model=ensemble.RandomForestRegressor()
+    parameters={'n_estimators':np.linspace(5, trainX.shape[1], 20).astype(int)}
+    gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
     
-    return data
+    trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
+    gridCV.fit(trainX_split,trainY_split)
+    
+    n_estimators = gridCV.best_params_['n_estimators']
+    print n_estimators
+    
+    model=ensemble.RandomForestRegressor(n_estimators=n_estimators)
+    
+    print "Fitting model..."
+    
+    model.fit(trainX,trainY)
+    predictions=model.predict(testX)
+    
+    return predictions
 
 
-def Train(X, Y, model, N):
-    """Train the data on train-test-splits from the training data. Print the mean absolute error"""
+def Run_SVR(trainX,trainY,testX):
+    """Run a support vector regression model"""
     
-    MAEs = 0
-    for i in range(N):
-        trainX, X_CV, trainY, Y_CV = train_test_split(X, Y)
-        model.fit(trainX, trainY)
-        predictions = model.predict(X_CV)
-        predictions = np.clip(predictions, np.min(trainY), np.max(trainY))
-        mae = MAE(Y_CV,predictions)
-        MAEs += mae
+    init_model=svm.SVR()
+    parameters={'C':np.logspace(-5,5,10), 'gamma':np.logspace(-5,5,10), 'epsilon':np.logspace(-2,2,10)}
+    gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
     
-    return MAEs/N
+    trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
+    gridCV.fit(trainX_split,trainY_split)
+    
+    gamma = gridCV.best_params_['gamma']
+    C = gridCV.best_params_['C']
+    epsilon = gridCV.best_params_['epsilon']
+    
+    print gamma, C, epsilon
+    
+    model=svm.SVR(C=C, gamma=gamma, epsilon=epsilon)
+    
+    print "Fitting model..."
+    
+    model.fit(trainX,trainY)
+    predictions=model.predict(testX)
+    
+    return predictions
 
 
-def MAE(predictions,target):
-	''' Find the mean absolute error '''
-	return np.mean(np.absolute(predictions-target))
+def Run_ridge(trainX,trainY,testX):
+    """Run a Ridge model"""
+    
+    model=linear_model.RidgeCV(alphas=np.logspace(-0,3,100),cv=5)
+    
+    print "Fitting model..."
+    
+    model.fit(trainX,trainY)
+    predictions=model.predict(testX)
+    
+    return predictions
+
+
+def Run_GBR(trainX,trainY,testX):
+    """Run a Gradient Bosted Regressor model"""
+    
+    parameters={"loss": "lad", "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
+    
+    model=ensemble.GradientBoostingRegressor(parameters)
+    
+    print "Fitting model..."
+    
+    model.fit(trainX,trainY)
+    predictions=model.predict(testX)
+    
+    return predictions
 
 
 def main():
@@ -105,15 +155,13 @@ def main():
 
 	Times,TrainY_all=split_times(df_Train)
 
-	print "Defining model"
-
-	model=RandomForestRegressor()
+    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
     
-	print "Run CV loop on train-test-splits"
+    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
+    
+    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
 
-	Av_error=Train(TrainX_all,TrainY_all,model,20)
-
-	print Av_error
+    Predictions_GBR=Run_GBR()
 
 
 if __name__ == "__main__":
