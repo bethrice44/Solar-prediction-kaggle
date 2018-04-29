@@ -13,6 +13,8 @@ from sklearn.ensemble import RandomForestRegressor
 from netCDF4 import Dataset
 
 
+SEED=42
+
 def import_csv_data():
 	"""Import csv training data containing the total daily incoming solar energy in (J m-2) at 98 Oklahoma Mesonet sites"""
 	df_train=np.loadtxt('train.csv',delimiter=',',dtype=float,skiprows=1)
@@ -30,7 +32,7 @@ def split_times(df_data):
 
 
 def get_all_predictors(path,predictors,postfix):
-    """Get all the predicting data for train and test"""
+	"""Get all the predicting data for train and test"""
 	
 	for i,predictor in enumerate(predictors):
 		if i==0:
@@ -43,7 +45,7 @@ def get_all_predictors(path,predictors,postfix):
 
 
 def get_predictor(path,predictor,postfix):
-    """Get predicting data for train and test for a sepcific predictor"""
+	"""Get predicting data for train and test for a sepcific predictor"""
 
 	X=Dataset(os.path.join(path,predictor+postfix)).variables.values()[-1][:]
 	X=X.reshape(X.shape[0],55,9,16)
@@ -54,85 +56,104 @@ def get_predictor(path,predictor,postfix):
 
 
 def Run_random_forest(trainX,trainY,testX):
-    """Run a random forest regressor model"""
+	"""Run a random forest regressor model"""
     
-    init_model=ensemble.RandomForestRegressor()
-    parameters={'n_estimators':np.linspace(5, trainX.shape[1], 20).astype(int)}
-    gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
+	init_model=ensemble.RandomForestRegressor()
+	parameters={'n_estimators':np.linspace(5, trainX.shape[1], 20).astype(int)}
+	gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
     
-    trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
-    gridCV.fit(trainX_split,trainY_split)
+	trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
+	gridCV.fit(trainX_split,trainY_split)
     
-    n_estimators = gridCV.best_params_['n_estimators']
-    print n_estimators
+	n_estimators = gridCV.best_params_['n_estimators']
+	print n_estimators
     
-    model=ensemble.RandomForestRegressor(n_estimators=n_estimators)
+	model=ensemble.RandomForestRegressor(n_estimators=n_estimators)
     
-    print "Fitting model..."
+	print "Fitting model..."
     
-    model.fit(trainX,trainY)
-    predictions=model.predict(testX)
+	model.fit(trainX,trainY)
+	predictions=model.predict(testX)
     
-    return predictions
+	return predictions
 
 
 def Run_SVR(trainX,trainY,testX):
-    """Run a support vector regression model"""
+	"""Run a support vector regression model"""
     
-    init_model=svm.SVR()
-    parameters={'C':np.logspace(-5,5,10), 'gamma':np.logspace(-5,5,10), 'epsilon':np.logspace(-2,2,10)}
-    gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
+	init_model=svm.SVR()
+	parameters={'C':np.logspace(-5,5,10), 'gamma':np.logspace(-5,5,10), 'epsilon':np.logspace(-2,2,10)}
+	gridCV=grid_search.GridSearchCV(init_model,parameters,cv=10)
     
-    trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
-    gridCV.fit(trainX_split,trainY_split)
+	trainX_split,testX_split,trainY_split,testY_split = train_test_split(trainX,trainY,test_size=500)
+	gridCV.fit(trainX_split,trainY_split)
     
-    gamma = gridCV.best_params_['gamma']
-    C = gridCV.best_params_['C']
-    epsilon = gridCV.best_params_['epsilon']
+	gamma = gridCV.best_params_['gamma']
+	C = gridCV.best_params_['C']
+	epsilon = gridCV.best_params_['epsilon']
     
-    print gamma, C, epsilon
+	print gamma, C, epsilon
     
-    model=svm.SVR(C=C, gamma=gamma, epsilon=epsilon)
+	model=svm.SVR(C=C, gamma=gamma, epsilon=epsilon)
     
-    print "Fitting model..."
+	print "Fitting model..."
     
-    model.fit(trainX,trainY)
-    predictions=model.predict(testX)
+	model.fit(trainX,trainY)
+	predictions=model.predict(testX)
     
-    return predictions
+	return predictions
 
 
 def Run_ridge(trainX,trainY,testX):
-    """Run a Ridge model"""
+	"""Run a Ridge model"""
     
-    model=linear_model.RidgeCV(alphas=np.logspace(-0,3,100),cv=5)
+	model=linear_model.RidgeCV(alphas=np.logspace(-0,3,100),cv=5)
     
-    print "Fitting model..."
+	print "Fitting model..."
     
-    model.fit(trainX,trainY)
-    predictions=model.predict(testX)
+	model.fit(trainX,trainY)
+	predictions=model.predict(testX)
     
-    return predictions
+	return predictions
 
 
 def Run_GBR(trainX,trainY,testX):
-    """Run a Gradient Bosted Regressor model"""
+	"""Run a Gradient Bosted Regressor model"""
     
-    parameters={"loss": "lad", "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
+	parameters={"loss": "lad", "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
     
-    model=ensemble.GradientBoostingRegressor(parameters)
+	model=ensemble.GradientBoostingRegressor(parameters)
     
-    print "Fitting model..."
+	print "Fitting model..."
     
-    model.fit(trainX,trainY)
-    predictions=model.predict(testX)
+	model.fit(trainX,trainY)
+	predictions=model.predict(testX)
     
-    return predictions
+	return predictions
+
+
+def MAPE(predictions,target):
+	''' Find the mean absolute percentage error '''
+	predictions,target=np.array(predictions),np.array(target)
+	return np.mean((np.absolute(predictions-target)/target)*100)
+
+
+def cv_loop(X, y, model, N, cv_test_size):
+	MAPEs = 0
+	for i in range(N):
+		X_train, X_cv, y_train, y_cv = train_test_split(X, y, test_size=cv_test_size, random_state = i*SEED)
+		model.fit(X_train, y_train)
+		preds = model.predict(X_cv)
+		preds = np.clip(preds, np.min(y_train), np.max(y_train))
+		mape = MAPE(y_cv,preds)
+		print "MAPE (fold %d/%d): %f" % (i + 1, N, mape)
+		MAPEs += mape
+	return MAPEs/N
+
 
 
 def main():
-    
-    """Using all predictors"""
+	"""Using all predictors"""
     
 	Predictors = ['apcp_sfc','dlwrf_sfc','dswrf_sfc','pres_msl','pwat_eatm',\
                   'spfh_2m','tcdc_eatm','tcolc_eatm','tmax_2m','tmin_2m',\
@@ -155,13 +176,20 @@ def main():
 
 	Times,TrainY_all=split_times(df_Train)
 
-    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
-    
-    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
-    
-    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
+#    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
 
-    Predictions_GBR=Run_GBR()
+#    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
+    
+#    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
+
+#    Predictions_GBR=Run_GBR(TrainX_all,TrainY_all,testX_all)
+
+
+	parameters={"loss": "lad", "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
+    
+	model=ensemble.GradientBoostingRegressor(parameters)
+
+	print "CV loop ", cv_loop(TrainX_all,TrainY_all,model,10,0.3)
 
 
 if __name__ == "__main__":
