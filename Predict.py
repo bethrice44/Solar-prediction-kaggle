@@ -10,6 +10,7 @@ import numpy as np
 import os
 from sklearn.cross_validation import train_test_split
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import GradientBoostingRegressor
 from netCDF4 import Dataset
 
 
@@ -133,15 +134,16 @@ def Run_GBR(trainX,trainY,testX):
 
 
 def MAPE(predictions,target):
-	''' Find the mean absolute percentage error '''
+	""" Find the mean absolute percentage error """
 	predictions,target=np.array(predictions),np.array(target)
 	return np.mean((np.absolute(predictions-target)/target)*100)
 
 
-def cv_loop(X, y, model, N, cv_test_size):
+def cv_loop(X, y, model, N):
+    """ Cross-validation loop to test model with train-test-splits on training set """
 	MAPEs = 0
 	for i in range(N):
-		X_train, X_cv, y_train, y_cv = train_test_split(X, y, test_size=cv_test_size, random_state = i*SEED)
+		X_train, X_cv, y_train, y_cv = train_test_split(X, y, random_state = i*SEED)
 		model.fit(X_train, y_train)
 		preds = model.predict(X_cv)
 		preds = np.clip(preds, np.min(y_train), np.max(y_train))
@@ -150,6 +152,19 @@ def cv_loop(X, y, model, N, cv_test_size):
 		MAPEs += mape
 	return MAPEs/N
 
+
+def save_submission(all_predictions):
+    """ Save predictions for given dates, shape = (len(times),98) """
+    column_names = np.loadtxt( 'sampleSubmission.csv', delimiter=',' )[0,:]
+	predictions = np.loadtxt( 'sampleSubmission.csv', skiprows=1, delimiter=',' )
+    
+	for i in range(0,98):
+    	predictions[:, i+1] = all_predictions[i]
+
+	submission = np.concatenate((column_names,predictions),axis=0)
+    np.savetxt("Submission.csv",submission,delimiter=',')
+
+    return 0
 
 
 def main():
@@ -170,26 +185,29 @@ def main():
 	TrainX_all=get_all_predictors(train_path,Predictors,train_end)
 	TestX_all=get_all_predictors(test_path,Predictors,test_end)
     
+	print "Shape of trainX: ", np.shape(TrainX_all)
+    
 	print "Importing trainY..."
         
 	df_Train=import_csv_data()
 
 	Times,TrainY_all=split_times(df_Train)
-
-#    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
-
-#    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
     
-#    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
+	print "Shape of trainY: ", np.shape(TrainY_all)
 
-#    Predictions_GBR=Run_GBR(TrainX_all,TrainY_all,testX_all)
+    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
 
-
-	parameters={"loss": "lad", "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
+    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
     
-	model=ensemble.GradientBoostingRegressor(parameters)
+    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
 
-	print "CV loop ", cv_loop(TrainX_all,TrainY_all,model,10,0.3)
+    Predictions_GBR=Run_GBR(TrainX_all,TrainY_all,testX_all)
+
+	parameters={"loss": 'ls', "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
+    
+	model=GradientBoostingRegressor(parameters)
+
+	print "CV loop ", cv_loop(TrainX_all,TrainY_all[:,0],model,10)
 
 
 if __name__ == "__main__":
