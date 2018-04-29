@@ -195,13 +195,13 @@ def main():
     
 	print "Shape of trainY: ", np.shape(TrainY_all)
 
-    Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
+	Predictions_RF=Run_random_forest(TrainX_all,TrainY_all,testX_all)
 
-    Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
+	Predictions_SVR=Run_SVR(TrainX_all,TrainY_all,testX_all)
     
-    Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
+	Predictions_Ridge=Run_ridge(TrainX_all,TrainY_all,testX_all)
 
-    Predictions_GBR=Run_GBR(TrainX_all,TrainY_all,testX_all)
+	Predictions_GBR=Run_GBR(TrainX_all,TrainY_all,testX_all)
 
 	parameters={"loss": 'ls', "n_estimators": 3000, "learning_rate": 0.035, "max_features": 80,  "max_depth": 7, "subsample": 0.5}
     
