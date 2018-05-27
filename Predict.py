@@ -158,20 +158,20 @@ def mape(predictions, target):
     return np.mean((np.absolute(predictions-target)/target)*100)
 
 
-def cv_loop(X, y, model, N):
+def cv_loop(x, y, model, N):
     """ Cross-validation loop to test model with train-test-splits
     on train set """
-    MAPEs = 0
+    mapes = 0
     for i in range(N):
-        X_train, X_cv, y_train, y_cv = train_test_split(
-            X, y, random_state=i*SEED)
-        model.fit(X_train, y_train)
-        preds = model.predict(X_cv)
+        x_train, x_cv, y_train, y_cv = train_test_split(
+            x, y, random_state=i*SEED)
+        model.fit(x_train, y_train)
+        preds = model.predict(x_cv)
         preds = np.clip(preds, np.min(y_train), np.max(y_train))
         mean_abs_error = mape(y_cv, preds)
         print "MAPE (fold %d/%d): %f" % (i + 1, N, mean_abs_error)
-        MAPEs += mean_abs_error
-        return MAPEs/N
+        mapes += mean_abs_error
+        return mapes/N
 
 
 def save_submission(all_predictions):
@@ -217,26 +217,26 @@ def main():
 
     print "Importing trainX, testX..."
 
-    TrainX_all = get_all_predictors(train_path, Predictors, train_end)
-    TestX_all = get_all_predictors(test_path, Predictors, test_end)
+    train_x_all = get_all_predictors(train_path, Predictors, train_end)
+    test_x_all = get_all_predictors(test_path, Predictors, test_end)
 
-    print "Shape of trainX: ", np.shape(TrainX_all)
+    print "Shape of trainX: ", np.shape(train_x_all)
 
     print "Importing trainY..."
 
-    df_Train = import_csv_data()
+    df_train = import_csv_data()
 
-    Times, TrainY_all = split_times(df_Train)
+    times, train_y_all = split_times(df_train)
 
-    print "Shape of trainY: ", np.shape(TrainY_all)
+    print "Shape of trainY: ", np.shape(train_y_all)
 
-    Predictions_RF = run_random_forest(TrainX_all, TrainY_all, testX_all)
+    predictions_rf = run_random_forest(train_x_all, train_y_all, test_x_all)
 
-    Predictions_SVR = run_svr(TrainX_all, TrainY_all, testX_all)
+    predictions_svr = run_svr(train_x_all, train_y_all, test_x_all)
 
-    Predictions_Ridge = run_ridge(TrainX_all, TrainY_all, testX_all)
+    predictions_ridge = run_ridge(train_x_all, train_y_all, test_y_all)
 
-    Predictions_GBR = run_gbr(TrainX_all, TrainY_all, testX_all)
+    predictions_gbr = run_gbr(train_x_all, train_y_all, test_x_all)
 
     parameters = {
         "loss": 'ls',
@@ -249,7 +249,7 @@ def main():
 
     model = GradientBoostingRegressor(parameters)
 
-    print "CV loop ", cv_loop(TrainX_all, TrainY_all[:, ], model, 10)
+    print "CV loop ", cv_loop(train_x_all, train_y_all[:, ], model, 10)
 
 
 if __name__ == "__main__":
